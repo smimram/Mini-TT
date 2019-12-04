@@ -10,7 +10,7 @@ type expr =
   | EOne (** unit type *)
   | EUnit (** unit constructor *)
   | EPair of expr * expr (** pair *)
-  | ECon of name * expr (** constructor *)
+  | ECons of name * expr (** constructor *)
   | ESum of branch (** sum type *)
   | EFun of branch (** pattern matching *)
   | EFst of expr (** first projection *)
@@ -37,7 +37,7 @@ and branch = (name * expr) list
 type value =
   | Abs of clos (** abstraction *)
   | Pair of value * value (** pair *)
-  | Con of name * value (** constructor *)
+  | Cons of name * value (** constructor *)
   | Unit (** unit constructor *)
   | Set (** universe *)
   | Pi of value * clos (** Pi type *)
@@ -100,33 +100,64 @@ let rec pattern_proj p x v =
 (** Bind a pattern to a value in rho. *)
 let add_var rho p v = (RhoVar (p,v))::rho
 
+(** String representation of an expression. *)
 let rec string_of_expr = function
-  | EDecl (Def (p, a, e), e') ->
-    Printf.sprintf "%s : %s = %s\n%s"
-      (string_of_pattern p)
-      (string_of_expr a)
-      (string_of_expr e)
-      (string_of_expr e')
-  | _ -> "???"
+  | EAbs (p, e) -> Printf.sprintf "λ %s . %s" (string_of_pattern p) (string_of_expr e)
+  | ESet -> "U"
+  | EPi (p, a, e) -> Printf.sprintf "Π %s : %s . %s" (string_of_pattern p) (string_of_expr a) (string_of_expr e)
+  | ESig (p, a, e) -> Printf.sprintf "Σ %s : %s . %s" (string_of_pattern p) (string_of_expr a) (string_of_expr e)
+  | EOne -> "1"
+  | EUnit -> "()"
+  | EPair (e1, e2) -> Printf.sprintf "(%s , %s)" (string_of_expr e1) (string_of_expr e2)
+  | ECons (c, e) -> Printf.sprintf "$%s %s" c (string_of_expr e)
+  | ESum b -> Printf.sprintf "Sum %s" (string_of_branch b)
+  | EFun b -> Printf.sprintf "fun %s" (string_of_branch b)
+  | EFst e -> Printf.sprintf "fst %s" (string_of_expr e)
+  | ESnd e -> Printf.sprintf "snd %s" (string_of_expr e)
+  | EApp (e1, e2) -> Printf.sprintf "(%s %s)" (string_of_expr e1) (string_of_expr e2)
+  | EVar x -> x
+  | EDecl (Def (p, a, e), e') -> Printf.sprintf "%s : %s = %s\n%s" (string_of_pattern p) (string_of_expr a) (string_of_expr e) (string_of_expr e')
+  | EDecl (Drec (p, a, e), e') -> Printf.sprintf "rec %s : %s = %s\n%s" (string_of_pattern p) (string_of_expr a) (string_of_expr e) (string_of_expr e')
 and string_of_pattern = function
   | PVar x -> x
   | PUnit -> "()"
-  | PPair (p1, p2) ->
-    Printf.sprintf "(%s , %s)"
-      (string_of_pattern p1)
-      (string_of_pattern p2)
+  | PPair (p1, p2) -> Printf.sprintf "(%s , %s)" (string_of_pattern p1) (string_of_pattern p2)
+and string_of_branch b =
+  "(" ^ String.concat " | " (List.map (fun (c, a) -> Printf.sprintf "$%s → %s" c (string_of_expr a)) b) ^ ")"
+
+(** String representation of a value. *)
+let rec string_of_value = function
+  | Abs f -> string_of_clos f
+  | Pair (u, v) -> Printf.sprintf "(%s , %s)" (string_of_value u) (string_of_value v)
+  | Cons (c, v) -> Printf.sprintf "$%s %s" c (string_of_value v)
+  | Unit -> "()"
+  | Set -> "U"
+  | Pi (v, g) -> Printf.sprintf "Π %s . %s" (string_of_value v) (string_of_clos g)
+  | Sig (v, g) -> Printf.sprintf "Σ %s . %s" (string_of_value v) (string_of_clos g)
+  | One -> "1"
+  | Fun f -> Printf.sprintf "fun %s" (string_of_sclos f)
+  | Sum s -> Printf.sprintf "Sum %s" (string_of_sclos s)
+  | Nt t -> string_of_neutral t
+and string_of_neutral = function
+  | Gen n -> Printf.sprintf "x%d" n
+  | App (n, v) -> Printf.sprintf "%s %s" (string_of_neutral n) (string_of_value v)
+  | Fst n -> Printf.sprintf "fst %s" (string_of_neutral n)
+  | Snd n -> Printf.sprintf "snd %s" (string_of_neutral n)
+  | NtFun (_, _) -> "<fun>"
+and string_of_clos _ = "<fun>"
+and string_of_sclos _ = "..."
 
 (** Instantiate a closure with a value. *)
 let rec ( * ) c v =
   match c with
   | Cl (p, e, rho) -> eval (add_var rho p v) e
-  | ClCmp (f, c) -> f * Con (c, v)
+  | ClCmp (f, c) -> f * Cons (c, v)
 
 (** Apply a value to another. *)
 and app u v =
   match u, v with
   | Abs f, v -> f * v
-  | Fun (ces, rho), Con (c, v) -> app (eval rho (List.assoc c ces)) v
+  | Fun (ces, rho), Cons (c, v) -> app (eval rho (List.assoc c ces)) v
   | Fun s, Nt k -> Nt (NtFun (s, k))
   | Nt k, m -> Nt (App (k, m))
   | _, _ -> failwith "app"
@@ -145,7 +176,7 @@ and eval rho = function
   | EApp (e1, e2) -> app (eval rho e1) (eval rho e2)
   | EVar x -> get_rho rho x
   | EPair (e1, e2) -> Pair (eval rho e1, eval rho e2)
-  | ECon (c, e1) -> Con (c, eval rho e1)
+  | ECons (c, e1) -> Cons (c, eval rho e1)
   | ESum cas -> Sum (cas, rho)
   | EFun ces -> Fun (ces, rho)
 
@@ -162,7 +193,7 @@ and get_rho rho x =
 type normal = 
   | NAbs of int * normal (** abstraction *)
   | NPair of normal * normal (** pair *)
-  | NCon of name * normal (** constructor *)
+  | NCons of name * normal (** constructor *)
   | NUnit (** unit constructor *)
   | NSet (** universe *)
   | NPi of normal * int * normal (** Pi types *)
@@ -211,7 +242,7 @@ let rec readback i v =
   match v with
   | Abs f -> NAbs (i, readback (i+1) (f * gen i))
   | Pair (u, v) -> NPair (readback i u, readback i v)
-  | Con (c, v) -> NCon (c, readback i v)
+  | Cons (c, v) -> NCons (c, readback i v)
   | Unit -> NUnit
   | Set -> NSet
   | Pi (t, g) -> NPi (readback i t, i, readback (i+1) (g * gen i))
@@ -248,8 +279,13 @@ let rec check_type k rho gamma = function
 
 (** Check that an expression has given type. *)
 and check k rho gamma e t =
+  Printf.printf "CHECK %s IS %s\n%!" (string_of_expr e) (string_of_value t);
   let eq k m1 m2 =
-    if readback k m1 <> readback k m2 then failwith "eq"
+    if readback k m1 <> readback k m2 then
+      (
+        Printf.printf "EQ %s VS %s\n%!" (string_of_value m1) (string_of_value m2);
+        failwith "eq"
+      )
   in
   match e, t with
   | EAbs (p, e), Pi (t, g) ->
@@ -259,11 +295,11 @@ and check k rho gamma e t =
   | EPair (e1, e2), Sig (t, g) ->
     check k rho gamma e1 t;
     check k rho gamma e1 (g * eval rho e1)
-  | ECon (c, e), Sum (cas, rho) ->
+  | ECons (c, e), Sum (cas, rho) ->
     let a = List.assoc c cas in
     check k rho gamma e (eval rho a)
   | EFun ces, Pi (Sum (cas, rho), g) ->
-    if not (List.map fst ces <> List.map fst cas) then failwith "case branches does not match the data type";
+    if List.map fst ces <> List.map fst cas then failwith "case branches does not match the data type";
     List.iter
       (fun (c,e) ->
          let a = List.assoc c cas in
