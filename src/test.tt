@@ -1,0 +1,2 @@
+x : U = A → A
+# id : Π A : U . A → A = λ A . λ x . x
