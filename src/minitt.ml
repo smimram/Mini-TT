@@ -63,7 +63,7 @@ and clos =
   | Cl of pattern * expr * rho (** a function in an environment *)
   | ClCmp of clos * name
 
-(** Environment assigning expressions to variables. *)
+(** Environment assigning values to variables. *)
 and rho = in_rho list
 
 and in_rho =
@@ -104,9 +104,9 @@ let add_var rho p v = (RhoVar (p,v))::rho
 let rec string_of_expr = function
   | EAbs (p, e) -> Printf.sprintf "λ %s . %s" (string_of_pattern p) (string_of_expr e)
   | ESet -> "U"
-  | EPi (p, a, e) -> Printf.sprintf "Π %s : %s . %s" (string_of_pattern p) (string_of_expr a) (string_of_expr e)
-  | ESig (p, a, e) -> Printf.sprintf "Σ %s : %s . %s" (string_of_pattern p) (string_of_expr a) (string_of_expr e)
-  | EOne -> "1"
+  | EPi (p, a, e) -> Printf.sprintf "(Π %s : %s . %s)" (string_of_pattern p) (string_of_expr a) (string_of_expr e)
+  | ESig (p, a, e) -> Printf.sprintf "(Σ %s : %s . %s)" (string_of_pattern p) (string_of_expr a) (string_of_expr e)
+  | EOne -> "unit"
   | EUnit -> "()"
   | EPair (e1, e2) -> Printf.sprintf "(%s , %s)" (string_of_expr e1) (string_of_expr e2)
   | ECons (c, e) -> Printf.sprintf "$%s %s" c (string_of_expr e)
@@ -125,6 +125,7 @@ and string_of_pattern = function
 and string_of_branch b =
   "(" ^ String.concat " | " (List.map (fun (c, a) -> Printf.sprintf "$%s → %s" c (string_of_expr a)) b) ^ ")"
 
+(*
 (** String representation of a value. *)
 let rec string_of_value = function
   | Abs f -> string_of_clos f
@@ -134,18 +135,19 @@ let rec string_of_value = function
   | Set -> "U"
   | Pi (v, g) -> Printf.sprintf "Π %s . %s" (string_of_value v) (string_of_clos g)
   | Sig (v, g) -> Printf.sprintf "Σ %s . %s" (string_of_value v) (string_of_clos g)
-  | One -> "1"
+  | One -> "unit"
   | Fun f -> Printf.sprintf "fun %s" (string_of_sclos f)
   | Sum s -> Printf.sprintf "Sum %s" (string_of_sclos s)
   | Nt t -> string_of_neutral t
 and string_of_neutral = function
   | Gen n -> Printf.sprintf "x%d" n
-  | App (n, v) -> Printf.sprintf "%s %s" (string_of_neutral n) (string_of_value v)
+  | App (n, v) -> Printf.sprintf "(%s %s)" (string_of_neutral n) (string_of_value v)
   | Fst n -> Printf.sprintf "fst %s" (string_of_neutral n)
   | Snd n -> Printf.sprintf "snd %s" (string_of_neutral n)
   | NtFun (_, _) -> "<fun>"
 and string_of_clos _ = "<fun>"
-and string_of_sclos _ = "..."
+and string_of_sclos (b,_) = string_of_branch b
+*)
 
 (** Instantiate a closure with a value. *)
 let rec ( * ) c v =
@@ -221,6 +223,27 @@ and in_normal_rho =
   | NRhoVar of pattern * normal
   | NRhoDecl of decl
 
+let rec string_of_normal t =
+  let rec neutral = function
+    | NGen n -> Printf.sprintf "x%d" n
+    | NApp (t, u) -> Printf.sprintf "(%s %s)" (neutral t) (string_of_normal u)
+    | NFst t -> Printf.sprintf "fst %s" (neutral t)
+    | NSnd t -> Printf.sprintf "snd %s" (neutral t)
+    | NNtFun _ -> "<ntfun>"
+  in
+  match t with
+  | NAbs (n, t) -> Printf.sprintf "λ x%d . %s" n (string_of_normal t)
+  | NPair (t, u) -> Printf.sprintf "(%s , %s)" (string_of_normal t) (string_of_normal u)
+  | NCons (c, t) -> Printf.sprintf "($%s %s)" c (string_of_normal t)
+  | NUnit -> "()"
+  | NSet -> "Set"
+  | NPi (a, n, b) -> Printf.sprintf "(Π x%d : %s . %s)" n (string_of_normal a) (string_of_normal b)
+  | NSig (a, n, b) -> Printf.sprintf "(Σ x%d : %s . %s)" n (string_of_normal a) (string_of_normal b)
+  | NOne -> "unit"
+  | NFun _ -> "<fun>"
+  | NSum (b, _) -> Printf.sprintf "Sum %s" (string_of_branch b)
+  | NNt t -> neutral t
+
 (** Create a variable. *)
 let gen i = Nt (Gen i)
 
@@ -252,11 +275,14 @@ let rec readback i v =
   | Sum (s, rho) -> NSum (s, rrho i rho)
   | Nt l -> NNt (rneutral i l)
 
+let string_of_value t =
+  string_of_normal (readback 0 t)
+
 (** Environment assigning a type to variables. *)
 type gamma = name * value
 
 (** Declare a variable of given type in gamma environment. The last argument is
-   the value and is needed for dependent types. *)
+    the value and is needed for dependent types. *)
 let rec add_type gamma p t v =
   match p, t with
   | PUnit, _  -> gamma
@@ -324,7 +350,9 @@ and check k rho gamma e t =
     eq k t t'
 
 (** Infer the type of an expression. *)
-and infer k rho gamma = function
+and infer k rho gamma e =
+  Printf.printf "INFER %s\n%!" (string_of_expr e);
+  match e with
   | EVar x -> List.assoc x gamma
   | EApp (e1, e2) ->
     (
@@ -333,7 +361,7 @@ and infer k rho gamma = function
         check k rho gamma e2 t;
         g * eval rho e2
       | _ -> failwith "infer"
-  )
+    )
   | EFst e ->
     (
       match infer k rho gamma e with
@@ -351,6 +379,7 @@ and infer k rho gamma = function
 (** Check a declaration and return the updated gamma environment. *)
 and check_decl k rho gamma = function
   | Def (p, a, e) ->
+    Printf.printf "\nDECL %s OF %s IS %s\n%!" (string_of_pattern p) (string_of_expr a) (string_of_expr e);
     check_type k rho gamma a;
     let t = eval rho a in
     check k rho gamma e t;

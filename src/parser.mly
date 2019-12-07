@@ -10,6 +10,7 @@
 %nonassoc DOT
 %right TO
 %nonassoc CONS
+%nonassoc SUM SET LPAR IDENT
 
 %start main
 %type<Minitt.expr> main
