@@ -1,0 +1,8 @@
+language: c
+sudo: false
+addons:
+  apt:
+    packages:
+    - ocaml-nox
+
+script: make
