@@ -1,2 +1,8 @@
-all clean:
-	$(MAKE) -C src $@
+all:
+	@dune build
+
+clean:
+	@dune clean
+
+test:
+	@dune test

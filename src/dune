@@ -1,0 +1,17 @@
+(menhir
+ (modules parser)
+)
+
+(ocamllex
+ (modules lexer)
+)
+
+(executable
+ (public_name minitt)
+ (libraries str)
+)
+
+(rule
+ (alias runtest)
+ (action (run ./minitt.exe test.tt))
+)

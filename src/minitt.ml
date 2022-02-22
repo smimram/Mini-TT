@@ -321,7 +321,7 @@ and check k rho gamma e t =
     check (k+1) (add_var rho p x) gamma e (g * x)
   | EPair (e1, e2), Sig (t, g) ->
     check k rho gamma e1 t;
-    check k rho gamma e1 (g * eval rho e1)
+    check k rho gamma e2 (g * eval rho e1)
   | ECons (c, e), Sum (cas, rho) ->
     let a = List.assoc c cas in
     check k rho gamma e (eval rho a)
