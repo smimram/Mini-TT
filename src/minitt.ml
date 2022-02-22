@@ -282,14 +282,15 @@ let string_of_value t =
 type gamma = name * value
 
 (** Declare a variable of given type in gamma environment. The last argument is
-    the value and is needed for dependent types. *)
+    the value and is needed for dependent sums (to get the type of the second
+    component). *)
 let rec add_type gamma p t v =
   match p, t with
   | PUnit, _  -> gamma
   | PVar x, t -> (x,t)::gamma
   | PPair (p1, p2), Sig (t, g) ->
     let gamma = add_type gamma p1 t (vfst v) in
-    add_type gamma p2  (g * vfst v) (vsnd v)
+    add_type gamma p2 (g * vfst v) (vsnd v)
   | _, _ -> failwith "add_type"
 
 (** Check that an expression is a type. *)
@@ -305,7 +306,7 @@ let rec check_type k rho gamma = function
 
 (** Check that an expression has given type. *)
 and check k rho gamma e t =
-  Printf.printf "CHECK %s IS %s\n%!" (string_of_expr e) (string_of_value t);
+  Printf.printf "CHECK(%d) %s IS %s\n%!" k (string_of_expr e) (string_of_value t);
   let eq k m1 m2 =
     if readback k m1 <> readback k m2 then
       (
