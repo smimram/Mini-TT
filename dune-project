@@ -5,7 +5,7 @@
 
 (source (github smimram/Mini-TT))
 (authors "Samuel Mimram")
-(maintainers "samuel.mimram@lix.polytechnique.fr")
+(maintainers "samuel.mimram@polytechnique.edu")
 
 (package
  (name minitt)
