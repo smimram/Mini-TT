@@ -93,8 +93,8 @@ let rec pattern_proj p x v =
   match p with
   | PVar y when x = y -> v
   | PPair (p1, p2) when in_pattern x p ->
-    if in_pattern x p1 then pattern_proj p1 x (vfst v)
-    else pattern_proj p2 x (vsnd v)
+     if in_pattern x p1 then pattern_proj p1 x (vfst v)
+     else pattern_proj p2 x (vsnd v)
   | _ -> failwith "pattern_proj"
 
 (** Bind a pattern to a value in rho. *)
@@ -258,8 +258,8 @@ let rec readback i v =
   and rrho i rho =
     List.map
       (function
-        | RhoVar (p, v) -> NRhoVar (p, readback i v)
-        | RhoDecl d -> NRhoDecl d
+       | RhoVar (p, v) -> NRhoVar (p, readback i v)
+       | RhoDecl d -> NRhoDecl d
       ) rho
   in
   match v with
@@ -296,11 +296,11 @@ let rec add_type gamma p t v =
 (** Check that an expression is a type. *)
 let rec check_type k rho gamma = function
   | EPi (p, a, b) ->
-    check_type k rho gamma a;
-    let gamma = add_type gamma p (eval rho a) (gen k) in
-    check_type (k+1) (add_var rho p (gen k)) gamma b
+     check_type k rho gamma a;
+     let gamma = add_type gamma p (eval rho a) (gen k) in
+     check_type (k+1) (add_var rho p (gen k)) gamma b
   | ESig (p, a, b) ->
-    check_type k rho gamma (EPi (p, a, b))
+     check_type k rho gamma (EPi (p, a, b))
   | ESet -> ()
   | a -> check k rho gamma a Set
 
@@ -316,39 +316,39 @@ and check k rho gamma e t =
   in
   match e, t with
   | EAbs (p, e), Pi (t, g) ->
-    let x = gen k in
-    let gamma = add_type gamma p t x in
-    check (k+1) (add_var rho p x) gamma e (g * x)
+     let x = gen k in
+     let gamma = add_type gamma p t x in
+     check (k+1) (add_var rho p x) gamma e (g * x)
   | EPair (e1, e2), Sig (t, g) ->
-    check k rho gamma e1 t;
-    check k rho gamma e2 (g * eval rho e1)
+     check k rho gamma e1 t;
+     check k rho gamma e2 (g * eval rho e1)
   | ECons (c, e), Sum (cas, rho) ->
-    let a = List.assoc c cas in
-    check k rho gamma e (eval rho a)
+     let a = List.assoc c cas in
+     check k rho gamma e (eval rho a)
   | EFun ces, Pi (Sum (cas, rho), g) ->
-    if List.map fst ces <> List.map fst cas then failwith "case branches does not match the data type";
-    List.iter
-      (fun (c,e) ->
+     if List.map fst ces <> List.map fst cas then failwith "case branches does not match the data type";
+     List.iter
+       (fun (c,e) ->
          let a = List.assoc c cas in
          check k rho gamma e (Pi (eval rho a, ClCmp (g, c)))
-      ) ces
+       ) ces
   | EUnit, One -> ()
   | EOne, Set -> ()
   | EPi (p, a, b), Set ->
-    check k rho gamma a Set;
-    let x = gen k in
-    let gamma = add_type gamma p (eval rho a) x in
-    check (k+1) (add_var rho p x) gamma b Set
+     check k rho gamma a Set;
+     let x = gen k in
+     let gamma = add_type gamma p (eval rho a) x in
+     check (k+1) (add_var rho p x) gamma b Set
   | ESig (p, a, b), Set ->
-    check k rho gamma (EPi (p, a, b)) Set
+     check k rho gamma (EPi (p, a, b)) Set
   | ESum cas, Set ->
-    List.iter (fun (_, a) -> check k rho gamma a Set) cas
+     List.iter (fun (_, a) -> check k rho gamma a Set) cas
   | EDecl (d, e), t ->
-    let gamma = check_decl k rho gamma d in
-    check k ((RhoDecl d)::rho) gamma e t
+     let gamma = check_decl k rho gamma d in
+     check k ((RhoDecl d)::rho) gamma e t
   | e, t' ->
-    let t = infer k rho gamma e in
-    eq k t t'
+     let t = infer k rho gamma e in
+     eq k t t'
 
 (** Infer the type of an expression. *)
 and infer k rho gamma e =
@@ -356,40 +356,40 @@ and infer k rho gamma e =
   match e with
   | EVar x -> List.assoc x gamma
   | EApp (e1, e2) ->
-    (
-      match infer k rho gamma e1 with
-      | Pi (t, g) ->
-        check k rho gamma e2 t;
-        g * eval rho e2
-      | _ -> failwith "infer"
-    )
+     (
+       match infer k rho gamma e1 with
+       | Pi (t, g) ->
+          check k rho gamma e2 t;
+          g * eval rho e2
+       | _ -> failwith "infer"
+     )
   | EFst e ->
-    (
-      match infer k rho gamma e with
-      | Sig (a, _) -> a
-      | _ -> failwith "infer"
-    )
+     (
+       match infer k rho gamma e with
+       | Sig (a, _) -> a
+       | _ -> failwith "infer"
+     )
   | ESnd e ->
-    (
-      match infer k rho gamma e with
-      | Sig (_, g) -> g * vfst (eval rho e)
-      | _ -> failwith "infer"
-    )
+     (
+       match infer k rho gamma e with
+       | Sig (_, g) -> g * vfst (eval rho e)
+       | _ -> failwith "infer"
+     )
   | _ -> failwith "infer"
 
 (** Check a declaration and return the updated gamma environment. *)
 and check_decl k rho gamma = function
   | Def (p, a, e) ->
-    Printf.printf "\nDECL %s OF %s IS %s\n%!" (string_of_pattern p) (string_of_expr a) (string_of_expr e);
-    check_type k rho gamma a;
-    let t = eval rho a in
-    check k rho gamma e t;
-    add_type gamma p t (eval rho e)
+     Printf.printf "\nDECL %s OF %s IS %s\n%!" (string_of_pattern p) (string_of_expr a) (string_of_expr e);
+     check_type k rho gamma a;
+     let t = eval rho a in
+     check k rho gamma e t;
+     add_type gamma p t (eval rho e)
   | Drec (p, a, e) as d ->
-    check_type k rho gamma a;
-    let t = eval rho a in
-    let x = gen k in
-    let gamma = add_type gamma p t x in
-    check (k+1) (add_var rho p x) gamma e t;
-    let v = eval ((RhoDecl d)::rho) e in
-    add_type gamma p t v
+     check_type k rho gamma a;
+     let t = eval rho a in
+     let x = gen k in
+     let gamma = add_type gamma p t x in
+     check (k+1) (add_var rho p x) gamma e t;
+     let v = eval ((RhoDecl d)::rho) e in
+     add_type gamma p t v

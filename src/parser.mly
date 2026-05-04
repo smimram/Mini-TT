@@ -1,5 +1,5 @@
 %{
-    open Minitt
+open Minitt
 %}
 
 %token COLON EQ DOT TO LPAR RPAR VBAR N
