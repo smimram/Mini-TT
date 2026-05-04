@@ -1,0 +1,14 @@
+name: Build
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Install required packages
+      run: sudo apt-get -y install ocaml ocaml-dune menhir
+    - name: Build
+      run: dune build
+    - name: Test
+      run: dune runtest
