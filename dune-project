@@ -1,4 +1,4 @@
-(lang dune 2.0)
+(lang dune 3.14)
 (name minitt)
 
 (generate_opam_files true)

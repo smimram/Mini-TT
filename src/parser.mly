@@ -1,5 +1,5 @@
 %{
-open Minitt
+open Lang
 %}
 
 %token COLON EQ DOT TO LPAR RPAR VBAR N
@@ -13,7 +13,7 @@ open Minitt
 %nonassoc SUM SET LPAR IDENT
 
 %start main
-%type<Minitt.expr> main
+%type<Lang.expr> main
 %%
 
 main:
