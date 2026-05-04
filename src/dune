@@ -8,7 +8,6 @@
 
 (executable
  (public_name minitt)
- (libraries str)
 )
 
 (rule
