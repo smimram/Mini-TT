@@ -12,5 +12,6 @@
 
 (rule
  (alias runtest)
+ (deps test.tt)
  (action (run ./minitt.exe test.tt))
 )
