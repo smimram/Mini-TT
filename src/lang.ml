@@ -278,12 +278,24 @@ let rec readback i v =
 let string_of_value t =
   string_of_normal (readback 0 t)
 
-(** Environment assigning a type to variables. *)
-type gamma = name * value
+(** Extend type context by unpacking a pattern into a type.
+    update_gamma k p t gamma = (gamma', v, k')
+    where:
+    - gamma' is the extended type environment
+    - v is the value for the pattern
+    - k' is the next variable counter
+*)
+let rec update_gamma k p t gamma =
+  match p, t with
+  | PUnit, One -> gamma, Unit, k
+  | PVar x, _ -> (x, t)::gamma, gen k, k+1
+  | PPair (p1, p2), Sig (t1, g) ->
+     let gamma1, v1, k1 = update_gamma k p1 t1 gamma in
+     let gamma2, v2, k2 = update_gamma k1 p2 (g * v1) gamma1 in
+     gamma2, Pair (v1, v2), k2
+  | _ -> failwith "update_gamma"
 
-(** Declare a variable of given type in gamma environment. The last argument is
-    the value and is needed for dependent sums (to get the type of the second
-    component). *)
+(** Declare a variable of given type in gamma environment. The last argument is the value and is needed for dependent sums (to get the type of the second component). *)
 let rec add_type gamma p t v =
   match p, t with
   | PUnit, _  -> gamma
@@ -297,8 +309,8 @@ let rec add_type gamma p t v =
 let rec check_type k rho gamma = function
   | EPi (p, a, b) ->
      check_type k rho gamma a;
-     let gamma = add_type gamma p (eval rho a) (gen k) in
-     check_type (k+1) (add_var rho p (gen k)) gamma b
+     let gamma', x, k' = update_gamma k p (eval rho a) gamma in
+     check_type k' (add_var rho p x) gamma' b
   | ESig (p, a, b) ->
      check_type k rho gamma (EPi (p, a, b))
   | ESet -> ()
@@ -316,9 +328,8 @@ and check k rho gamma e t =
   in
   match e, t with
   | EAbs (p, e), Pi (t, g) ->
-     let x = gen k in
-     let gamma = add_type gamma p t x in
-     check (k+1) (add_var rho p x) gamma e (g * x)
+     let gamma', x, k' = update_gamma k p t gamma in
+     check k' (add_var rho p x) gamma' e (g * x)
   | EPair (e1, e2), Sig (t, g) ->
      check k rho gamma e1 t;
      check k rho gamma e2 (g * eval rho e1)
@@ -336,9 +347,8 @@ and check k rho gamma e t =
   | EOne, Set -> ()
   | EPi (p, a, b), Set ->
      check k rho gamma a Set;
-     let x = gen k in
-     let gamma = add_type gamma p (eval rho a) x in
-     check (k+1) (add_var rho p x) gamma b Set
+     let gamma', x, k' = update_gamma k p (eval rho a) gamma in
+     check k' (add_var rho p x) gamma' b Set
   | ESig (p, a, b), Set ->
      check k rho gamma (EPi (p, a, b)) Set
   | ESum cas, Set ->
@@ -388,8 +398,7 @@ and check_decl k rho gamma = function
   | Drec (p, a, e) as d ->
      check_type k rho gamma a;
      let t = eval rho a in
-     let x = gen k in
-     let gamma = add_type gamma p t x in
-     check (k+1) (add_var rho p x) gamma e t;
+     let gamma', x, k' = update_gamma k p t gamma in
+     check k' (add_var rho p x) gamma' e t;
      let v = eval ((RhoDecl d)::rho) e in
      add_type gamma p t v
