@@ -2,6 +2,7 @@ open Minitt
 
 let () =
   Printexc.record_backtrace true;
+  Printf.printf "Welcome to Mini-TT!\n\n%!";
   let fname = Sys.argv.(1) in
   let ic = open_in fname in
   let lexbuf = Lexing.from_channel ic in
