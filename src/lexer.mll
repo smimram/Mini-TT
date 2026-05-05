@@ -26,5 +26,10 @@ rule token = parse
   | "$"(['A'-'Z''a'-'z']+ as s) { CONS s }
   | '#'[^'\n']* { token lexbuf }
   | space+ { token lexbuf }
+  | "--"[^'\n']* { token lexbuf }
   | "\n" { new_line lexbuf; N }
   | eof { EOF }
+
+(* Local Variables: *)
+(* mode: tuareg *)
+(* End: *)
