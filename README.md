@@ -13,3 +13,4 @@ We have two kind of environments (which both assign value to variables):
 - _rho_ which provides a value for free variables,
 - _gamma_ which provides a type for free variables.
 
+For simplicity, we (inconsistently) assume _type in type_.
