@@ -24,9 +24,9 @@ rule token = parse
   | "|" { VBAR }
   | (['A'-'Z''a'-'z''0'-'9']+ as s) { IDENT s }
   | "$"(['A'-'Z''a'-'z']+ as s) { CONS s }
+  | "--"[^'\n']* { token lexbuf }
   | '#'[^'\n']* { token lexbuf }
   | space+ { token lexbuf }
-  | "--"[^'\n']* { token lexbuf }
   | "\n" { new_line lexbuf; N }
   | eof { EOF }
 
