@@ -1,0 +1,5 @@
+-- Unit
+
+Unit : U = Sum ($tt)
+
+elimUnit : Π A : Unit → U . A $tt → Π x : Unit . A x = λ A . λ a . fun ($tt → a)
