@@ -1,3 +1,5 @@
+(** Main module for Mini-TT. *)
+
 (** An identifier. *)
 type name = string
 
