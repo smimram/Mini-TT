@@ -84,7 +84,7 @@ let vsnd = function
   | Nt k -> Nt (Snd k)
   | _ -> failwith "vsnd"
 
-(** Whenther a variable is defined by a pattern. *)
+(** Whether a variable is defined by a pattern. *)
 let rec in_pattern x = function
   | PVar y -> x = y
   | PPair (p1, p2) -> in_pattern x p1 || in_pattern x p2
