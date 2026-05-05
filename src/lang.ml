@@ -63,7 +63,7 @@ and sclos = branch * rho
 (** A function closure. *)
 and clos =
   | Cl of pattern * expr * rho (** a function in an environment *)
-  | ClCmp of clos * name
+  | ClCmp of clos * name (** a closure applied to a constructor (without its argument) *)
 
 (** Environment assigning values to variables. *)
 and rho = in_rho list
