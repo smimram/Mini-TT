@@ -9,8 +9,7 @@ let () =
       let ic = open_in fname in
       let lexbuf = Lexing.from_channel ic in
       let e =
-        try
-          Parser.main Lexer.token lexbuf
+        try Parser.main Lexer.token lexbuf
         with
         | Failure err ->
            let pos = (Lexing.lexeme_end_p lexbuf) in
@@ -22,7 +21,7 @@ let () =
                err
            in
            failwith err
-        | Parsing.Parse_error ->
+        | Parser.Error ->
            let pos = (Lexing.lexeme_end_p lexbuf) in
            let err =
              Printf.sprintf
